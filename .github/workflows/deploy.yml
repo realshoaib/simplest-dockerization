@@ -1,0 +1,32 @@
+name: CI/CD GitHub Pages Deployment
+
+on:
+  push:
+    branches:
+      - master # Triggers the pipeline every time you push to the MASTER branch
+
+permissions:
+  contents: write # Allows GitHub Actions to push files to your repository
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Build Docker Image
+        run: docker build -t simplest-dockerization .
+
+      - name: Extract Built Files from Container
+        run: |
+          # Run the container, naming it 'builder'
+          docker run --name builder simplest-dockerization
+          # Copy the compiled 'dist' folder from inside the container back to the host machine
+          docker cp builder:/app/dist ./dist
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist # Deploys the content inside the extracted dist folder
