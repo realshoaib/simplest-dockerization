@@ -15,18 +15,25 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      # 1. Clean up any previous dist directories on the runner host
+      - name: Clean runner host
+        run: rm -rf ./dist
+
       - name: Build Docker Image
         run: docker build --no-cache -t simplest-dockerization .
 
+      # 2. Force remove any existing 'builder' container, run fresh, and copy files
       - name: Extract Built Files from Container
         run: |
-          # Run the container, naming it 'builder'
+          docker rm -f builder || true
           docker run --name builder simplest-dockerization
-          # Copy the compiled 'dist' folder from inside the container back to the host machine
           docker cp builder:/app/dist ./dist
+          docker rm -f builder
 
+      # 3. Deploy using strict force_orphan to wipe out old cache on the gh-pages branch
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist # Deploys the content inside the extracted dist folder
+          publish_dir: ./dist
+          force_orphan: true # Wipes out previous commit history on gh-pages to ensure only latest files remain
